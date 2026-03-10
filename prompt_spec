@@ -1,3 +1,4 @@
-#1 from the return of body and email address
-#2 prepare a response based on the body using response.py
-#3 send the response to the email address via tool calling using email_agent.py
+#retrieve the senders name and email address
+#prepare a draft response based on the email body
+#create an input function from the user asking if they want to send the draft response to the email address 
+#send the draft response to the email address via tool calling iff the user wants to send the draft response to the email address

@@ -10,6 +10,8 @@ from msgraph.generated.users.item.mail_folders.item.messages.messages_request_bu
     MessagesRequestBuilder)
 from msgraph.generated.users.item.send_mail.send_mail_post_request_body import (
     SendMailPostRequestBody)
+from msgraph.generated.users.item.messages.item.reply.reply_post_request_body import (
+    ReplyPostRequestBody)
 from msgraph.generated.models.message import Message
 from msgraph.generated.models.item_body import ItemBody
 from msgraph.generated.models.body_type import BodyType
@@ -33,8 +35,8 @@ class Graph:
 
     # <GetUserTokenSnippet>
     async def get_user_token(self):
-        graph_scopes = self.settings['graphUserScopes']
-        access_token = self.device_code_credential.get_token(graph_scopes)
+        graph_scopes = self.settings['graphUserScopes'].split(' ')
+        access_token = self.device_code_credential.get_token(*graph_scopes)
         return access_token.token
     # </GetUserTokenSnippet>
 
@@ -57,7 +59,7 @@ class Graph:
     async def get_inbox(self):
         query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
             # Only request specific properties
-            select=['from', 'isRead', 'receivedDateTime', 'subject', 'bodyPreview', 'conversationId'],
+            select=['id', 'from', 'isRead', 'receivedDateTime', 'subject', 'bodyPreview', 'conversationId'],
             # Get at most 25 results
             top=25,
             # Sort by received time, newest first
@@ -92,6 +94,16 @@ class Graph:
 
         await self.user_client.me.send_mail.post(body=request_body)
     # </SendMailSnippet>
+
+    async def reply_to_message(self, message_id: str, body: str):
+        request_body = ReplyPostRequestBody()
+        message = Message()
+        message.body = ItemBody()
+        message.body.content_type = BodyType.Text
+        message.body.content = body
+        request_body.message = message
+        
+        await self.user_client.me.messages.by_message_id(message_id).reply.post(body=request_body)
 
     # <MakeGraphCallSnippet>
     async def make_graph_call(self):

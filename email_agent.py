@@ -52,6 +52,10 @@ class EmailAgent:
                             "body": {
                                 "type": "string",
                                 "description": "The body of the email"
+                            },
+                            "message_id": {
+                                "type": "string",
+                                "description": "The ID of the message to reply to (optional)"
                             }
                         },
                         "required": ["to", "subject", "body"]
@@ -88,11 +92,18 @@ class EmailAgent:
                 
                 if function_name == "send_email":
                     print(f"Sending email to {function_args.get('to')}...")
-                    await graph.send_mail(
-                        subject=function_args.get("subject"),
-                        body=function_args.get("body"),
-                        recipient=function_args.get("to")
-                    )
+                    msg_id = function_args.get("message_id")
+                    if msg_id:
+                        await graph.reply_to_message(
+                            message_id=msg_id,
+                            body=function_args.get("body")
+                        )
+                    else:
+                        await graph.send_mail(
+                            subject=function_args.get("subject"),
+                            body=function_args.get("body"),
+                            recipient=function_args.get("to")
+                        )
                     print("Email sent successfully.")
         else:
             print(response_message.content)
@@ -105,4 +116,4 @@ if __name__ == "__main__":
         print("Please set the GROQ_API_KEY environment variable.")
     else:
         agent = EmailAgent(GROQ_API_KEY, "admin@ai10x.dev")
-        asyncio.run(agent.run("Send an email to admin@ai10x.dev with subject 'Test' and body 'Hello from Groq!'"))
+        asyncio.run(agent.run("Send an email to Emmanuel Nsanga with subject 'Test' and body 'Hello from Groq!'"))

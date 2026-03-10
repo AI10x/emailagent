@@ -35,29 +35,50 @@ async def run_auto_responder():
     # We'll use a dummy address for construction, but the agent will use the one from the email
     agent = EmailAgent(groq_api_key, "auto-responder@example.com")
 
-    for body, email_address_obj in recipient_contents:
+    for body, email_address_obj, msg_id in recipient_contents:
         sender_email = email_address_obj.address
-        print(f"\nProcessing email from: {sender_email}")
-        print(f"Body: {body}")
-
-        # 2. Prepare a response based on the body using response.py
-        print("Generating response...")
-        response_text = generate_response(body)
-        print(f"Generated Response: {response_text}")
-        while True:
-            user_input = input("You: ")
-            response = generate_response(user_input)
-            if user_input.lower().strip() == "send & exit":
-                print("Sending email - Goodbye!")
-                break
-            print(f"Assistant: {response}")
-        # 3. Send the response to the email address via tool calling using email_agent.py
-        # The prompt for the agent tells it what to do
-        prompt = f"Send an email to {sender_email} with subject 'Re: Your message' and body '{response_text}'"
-        print(f"Agent prompt: {prompt}")
+        sender_name = email_address_obj.name or "Unknown"
+        print(f"\n--- Found message from {sender_name} ({sender_email}) ---")
         
-        await agent.run(prompt)
-        print(f"Finished processing for {sender_email}")
+        # 1. Check if the user wants to respond to this sender
+        confirm_respond = input(f"Would you like to prepare a response for {sender_email}? (y/n): ").strip().lower()
+        if confirm_respond != 'y':
+            print(f"Skipping {sender_email}.")
+            continue
+
+        # 2. Prepare a response draft based on the body using response.py
+        print("\nGenerating draft response...")
+        current_draft, chat_history = generate_response(body)
+        
+        while True:
+            print("-" * 30)
+            print(f"CURRENT DRAFT:\n{current_draft}")
+            print("-" * 30)
+            
+            # 3. Interactive Menu
+            print("\nOptions: (s)end, (e)dit draft, (d)iscard")
+            user_choice = input("Choice: ").strip().lower()
+            
+            if user_choice == 's':
+                # 4. Reply via EmailAgent using the message_id
+                prompt = f"Reply to the email with message_id '{msg_id}' to recipient {sender_email} with body: {current_draft}"
+                print(f"Sending via AI Agent...")
+                await agent.run(prompt)
+                print(f"Finished processing and sent to {sender_email}")
+                break
+            elif user_choice == 'e':
+                # Refine the draft with AI
+                edit_instruction = input("How should I change the draft? (e.g., 'make it shorter'): ").strip()
+                if edit_instruction:
+                    print("\nRefining draft...")
+                    current_draft, chat_history = generate_response(edit_instruction, history=chat_history)
+                else:
+                    print("No instruction provided. Returning to menu.")
+            elif user_choice == 'd':
+                print(f"Draft for {sender_email} was discarded.")
+                break
+            else:
+                print("Invalid choice. Please select (s), (e), or (d).")
 
 if __name__ == "__main__":
     asyncio.run(run_auto_responder())

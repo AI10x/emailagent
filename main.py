@@ -86,16 +86,10 @@ inbox = []
 async def list_inbox(graph: Graph):
     message_page = await graph.get_inbox()
     if message_page and message_page.value:
-        # Count conversationIds to identify threads
-        conversation_counts = {}
-        for message in message_page.value:
-            cid = message.conversation_id
-            conversation_counts[cid] = conversation_counts.get(cid, 0) + 1
-
         recepient_contents = []
-        # Output each message's details only if it's part of a thread
+        # Output each message's details if it is Read
         for message in message_page.value:
-            if conversation_counts[message.conversation_id] > 1:
+            if message.is_read:
                 print('Message:', message.subject)
                 if (
                     message.from_ and
@@ -103,7 +97,7 @@ async def list_inbox(graph: Graph):
                 ):
                     print('  From:', message.from_.email_address.name or 'NONE')
                     print('  Body:', message.body_preview)
-                    recepient_contents.append((message.body_preview, message.from_.email_address))
+                    recepient_contents.append((message.body_preview, message.from_.email_address, message.id))
                 else:
                     print('  From: NONE')
                 print('  Status:', 'Read' if message.is_read else 'Unread')
@@ -145,6 +139,7 @@ def get_mails():
 
 
     for page in inbox:
-        for body, email in page:
-            print(f"Body: {body}")
+        for body, email, msg_id in page:
+            print(f"Name: {email.name}")
             print(f"Email: {email.address}")
+            print(f"Body Preview: {body}\n")
